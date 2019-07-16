@@ -174,12 +174,31 @@ SSL_CTX* tls_init_ctx(const std::string &a_cipher_list,
         }
         if(!a_cipher_list.empty())
         {
-                if(! SSL_CTX_set_cipher_list(l_ctx, a_cipher_list.c_str()))
-                {
-                        TRC_ERROR("cannot set m_cipher list: %s\n", a_cipher_list.c_str());
-                        ERR_print_errors_fp(stderr);
-                        //close_connection(con, nowP);
-                        return NULL;
+                // -----------------------------------------
+                // guess cipher naming style from prefix...
+                // -----------------------------------------
+                if(strncmp(a_cipher_list.c_str(), "TLS_", 4) == 0) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                        if(!SSL_CTX_set_ciphersuites(l_ctx, a_cipher_list.c_str()))
+                        {
+                                TRC_ERROR("cannot set m_cipher list: %s\n", a_cipher_list.c_str());
+                                ERR_print_errors_fp(stderr);
+                                //close_connection(con, nowP);
+                                return NULL;
+                        }
+#endif
+                }
+                // -----------------------------------------
+                // assume legacy style cipher names
+                // -----------------------------------------
+                else {
+                        if(!SSL_CTX_set_cipher_list(l_ctx, a_cipher_list.c_str()))
+                        {
+                                TRC_ERROR("cannot set m_cipher list: %s\n", a_cipher_list.c_str());
+                                ERR_print_errors_fp(stderr);
+                                //close_connection(con, nowP);
+                                return NULL;
+                        }
                 }
         }
         const char *l_ca_file = NULL;
